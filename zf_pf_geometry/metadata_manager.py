@@ -1,6 +1,6 @@
 import os
 import json
-from typing import List
+from typing import List,Tuple
 import hashlib
 
 def get_JSON(dir,name=None):
@@ -38,7 +38,6 @@ def write_JSON(dir,key,value,name=None):
 
     json_file.close()
 
-
 def calculate_dict_checksum(data: dict) -> str:
     """
     Calculate a checksum (SHA256) of a dictionary.
@@ -55,7 +54,7 @@ def calculate_dict_checksum(data: dict) -> str:
     checksum = hashlib.sha256(serialized_data.encode('utf-8')).hexdigest()
     return checksum
 
-def should_process(input_dirs:List[str], input_keys: List[str], output_dir: str, verbose: bool = False) -> dict|bool:
+def should_process(input_dirs:List[str], input_keys: List[str], output_dir: str,output_key, verbose: bool = False) -> Tuple[dict,str]|bool:
     if len(input_dirs) != len(input_keys):
         raise ValueError("The number of input directories and keys should be the same.")
     
@@ -71,29 +70,23 @@ def should_process(input_dirs:List[str], input_keys: List[str], output_dir: str,
                 print(f"Skipping because the key {key} doesn't exist in the JSON file in {dir}.")
             return False
         input_data[key]=data[key]
-
+    
+    input_data_checksum = calculate_dict_checksum(input_data)
     output_data = get_JSON(output_dir)
+
     if output_data is None:
         if verbose:
             print(f"Processing because the output JSON file doesn't exist.")
-        return input_data
+        return input_data,input_data_checksum
     
-        
-    input_data_checksum = calculate_dict_checksum(input_data)
-    if "input_data_checksum" in output_data:
-        if input_data_checksum == output_data["input_data_checksum"]:
+    if "input_data_checksum" in output_data[output_key]:
+        if input_data_checksum == output_data[output_key]["input_data_checksum"]:
             if verbose:
                 print("Skipping because the input data has not changed.")
             return False
         if verbose:
             print("Processing because the input data has changed.")
-        return input_data
+        return input_data,input_data_checksum
     if verbose:
         print("Processing because the input data checksum is missing in the output JSON file.")
-    return input_data
-
-    
-    
-
-        
-    
+    return input_data,input_data_checksum

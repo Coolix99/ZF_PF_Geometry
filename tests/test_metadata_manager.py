@@ -123,9 +123,10 @@ def test_should_process_missing_json():
         input_dirs = [temp_dir]
         input_keys = ["key1"]
         output_dir = os.path.join(temp_dir, "output")
+        output_key = "output_key"
 
         # No JSON file exists in the input directory
-        result = should_process(input_dirs, input_keys, output_dir, verbose=True)
+        result = should_process(input_dirs, input_keys, output_dir, output_key, verbose=True)
         assert result is False, "The function should return False if an input JSON file is missing."
 
 def test_should_process_missing_key():
@@ -138,8 +139,9 @@ def test_should_process_missing_key():
         input_dirs = [temp_dir]
         input_keys = ["key1"]
         output_dir = os.path.join(temp_dir, "output")
+        output_key = "output_key"
 
-        result = should_process(input_dirs, input_keys, output_dir, verbose=True)
+        result = should_process(input_dirs, input_keys, output_dir, output_key, verbose=True)
         assert result is False, "The function should return False if a required key is missing."
 
 def test_should_process_no_output_json():
@@ -152,10 +154,13 @@ def test_should_process_no_output_json():
         input_dirs = [temp_dir]
         input_keys = ["key1"]
         output_dir = os.path.join(temp_dir, "output")
+        output_key = "output_key"
 
         # Ensure no output JSON file exists
-        result = should_process(input_dirs, input_keys, output_dir, verbose=True)
-        assert result == {"key1": "value1"}, "The function should return input data if the output JSON is missing."
+        result = should_process(input_dirs, input_keys, output_dir, output_key, verbose=True)
+        assert result == ({"key1": "value1"}, calculate_dict_checksum(input_data)), (
+            "The function should return input data and its checksum if the output JSON is missing."
+        )
 
 def test_should_process_input_data_changed():
     """Test should_process when input data has changed."""
@@ -172,12 +177,14 @@ def test_should_process_input_data_changed():
         os.makedirs(output_dir, exist_ok=True)
         old_input_data = {"key1": "old_value"}
         old_checksum = calculate_dict_checksum(old_input_data)
-        output_data = {"input_data_checksum": old_checksum}
+        output_data = {"output_key": {"input_data_checksum": old_checksum}}
         create_json_file(output_dir, "MetaData.json", output_data)
 
         # Check if processing is required
-        result = should_process(input_dirs, input_keys, output_dir, verbose=True)
-        assert result == {"key1": "value1"}, "The function should return input data if the input data has changed."
+        result = should_process(input_dirs, input_keys, output_dir, "output_key", verbose=True)
+        assert result == ({"key1": "value1"}, calculate_dict_checksum(input_data)), (
+            "The function should return input data and its checksum if the input data has changed."
+        )
 
 def test_should_process_no_changes():
     """Test should_process when there are no changes in input data."""
@@ -193,11 +200,11 @@ def test_should_process_no_changes():
         output_dir = os.path.join(temp_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
         checksum = calculate_dict_checksum(input_data)
-        output_data = {"input_data_checksum": checksum}
+        output_data = {"output_key": {"input_data_checksum": checksum}}
         create_json_file(output_dir, "MetaData.json", output_data)
 
         # Check if processing is required
-        result = should_process(input_dirs, input_keys, output_dir, verbose=True)
+        result = should_process(input_dirs, input_keys, output_dir, "output_key", verbose=True)
         assert result is False, "The function should return False if the input data has not changed."
 
 
