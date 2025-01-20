@@ -79,6 +79,11 @@ def should_process(input_dirs:List[str], input_keys: List[str], output_dir: str,
             print(f"Processing because the output JSON file doesn't exist.")
         return input_data,input_data_checksum
     
+    if not output_key in output_data:
+        if verbose:
+            print(f"Processing because the output key {output_key} doesn't exist in the output JSON file.")
+        return input_data,input_data_checksum
+    
     if "input_data_checksum" in output_data[output_key]:
         if input_data_checksum == output_data[output_key]["input_data_checksum"]:
             if verbose:

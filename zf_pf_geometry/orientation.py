@@ -12,7 +12,7 @@ def extract_coordinate(df, name):
     else:
         return None
 
-def orient_session(images:List[np.ndarray],scale:List[float],verbose:bool=False) -> Tuple[pd.DataFrame,str]:
+def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=False) -> Tuple[pd.DataFrame,str]:
     viewer = napari.Viewer(ndisplay=3)
     im_layer=None
     for img in images:
@@ -152,7 +152,8 @@ def orient_session(images:List[np.ndarray],scale:List[float],verbose:bool=False)
 
     new_rows = pd.DataFrame({'coordinate_mum': [n,v1], 'name': ['e_n','e_PD']})
     df = pd.concat([df, new_rows], ignore_index=True)
-    
+    df[['z', 'y', 'x']] = pd.DataFrame(df['coordinate_mum'].tolist(), index=df.index)
+    df.drop(columns=['coordinate_mum'], inplace=True)
     if verbose:
         print(df)
 
