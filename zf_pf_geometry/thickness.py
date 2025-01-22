@@ -64,7 +64,6 @@ def process_image(im_3d):
 
     return filled_component
 
-
 def calculate_Thickness(vol_img,mesh:pv.PolyData,scales):
     vol_img=process_image(vol_img)
 
@@ -83,37 +82,4 @@ def calculate_Thickness(vol_img,mesh:pv.PolyData,scales):
     
     mesh.point_data['thickness']=dist
 
-    # viewer = napari.Viewer(ndisplay=3)
-    # faces = mesh.faces.reshape(-1, 4)[:, 1:]
-    # surface = (points_px, faces,dist)
-    # viewer.add_surface(surface)
-    # viewer.add_labels(vol_img)
-    # #viewer.add_labels(blur)
-    # #viewer.add_points(points_plot)
-    # napari.run()
-
-    # p = pv.Plotter()
-    # p.add_mesh(mesh,scalars="thickness", color='grey', ambient=0.6, opacity=0.5, show_edges=False)
-    # p.show()
-    # p = pv.Plotter()
-    # p.add_mesh(mesh,scalars="lower_dist", color="grey", ambient=0.6, opacity=0.5, show_edges=False)
-    # p.show()
-    # p = pv.Plotter()
-    # p.add_mesh(mesh,scalars="diff", color="grey", ambient=0.6, opacity=0.5, show_edges=False)
-    # p.show()
-
-    # import matplotlib.pyplot as plt
-    # plt.figure(figsize=(10, 6))
-    # plt.hist(upper_dist-lower_dist, bins=30, alpha=0.7, color='blue', edgecolor='black')
-    # plt.title('Histogram of Values Distribution')
-    # plt.xlabel('Value')
-    # plt.ylabel('Frequency')
-    # plt.grid(axis='y', alpha=0.75)
-    # plt.show()
     return mesh
-
-
-
-if __name__ == "__main__":
-    make_Thickness() 
-
