@@ -140,8 +140,6 @@ def center_line_session(mask_3d,df,scale_3d):
     im = create_2d_image_from_3d(center_plane_point,direction_2 ,direction_1 , size_2d, mask_3d).astype(int)
     im_mask=im>0
 
-    
-  
     im_mask = np.array(im_mask, dtype=np.uint8)
     kernel_size = (11, 11) 
     blurred_image = cv2.GaussianBlur(im_mask, kernel_size, 0)
