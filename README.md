@@ -40,11 +40,13 @@ There will be a napari viewer opened. It should show all specified images.
 
 <img src="assets/orient_I.svg" alt="orientation1" width="400">
 
-2. 
+2. Rotate such that the distal tip points to you. Click left, press 'c'; click right, press 'd'.
+    A green line appears.
 
 <img src="assets/orient_II.svg" alt="orientation2" width="400">
 
-3.
+3. Rotate to have a side view. Click proximal, press 'e'; click distal, press 'f'.
+    A blue line should appear. To finish the session eigther close the viewer, press q or if you want to indicate wheter the fin is from left or right side press 'r' or 'l'.
 
 <img src="assets/orient_III.svg" alt="orientation3" width="400">
 
