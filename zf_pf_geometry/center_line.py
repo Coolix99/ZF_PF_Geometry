@@ -40,35 +40,34 @@ def create_2d_image_from_3d(center_plane_point,direction_2 ,direction_1 , size_2
     return image_2d
 
 def radial_center_line(prox_dist_pos,y_pos,closed_image):
-    import math
-    outside_point = (prox_dist_pos,y_pos )  
+    outside_point = (y_pos,prox_dist_pos)  
 
     num_angles = 91  # Adjust as needed
-    angles = np.linspace(0, math.pi / 2, num=num_angles)
+    angles = np.linspace(0, math.pi / 2, num=num_angles)[::-1]
 
     all_centroid_x=[]
     all_centroid_y=[]
 
     for i, angle in enumerate(angles):
         line_length = max(closed_image.shape) * 1.5  # Adjust as needed
-        end_x = outside_point[0] - line_length * math.cos(angle)
-        end_y = outside_point[1] - line_length * math.sin(angle)
+        end_y = outside_point[0] - line_length * math.cos(angle)
+        end_x = outside_point[1] - line_length * math.sin(angle)
 
         # Create an array of coordinates along the line from outside_point to the endpoint
-        x_coords = np.linspace(outside_point[0], end_x, num=int(line_length))
-        y_coords = np.linspace(outside_point[1], end_y, num=int(line_length))
+        x_coords = np.linspace(outside_point[1], end_x, num=int(line_length))
+        y_coords = np.linspace(outside_point[0], end_y, num=int(line_length))
         line_coords = np.column_stack((y_coords,x_coords)).astype(int)
 
         # Ensure that coordinates are within image bounds
         valid_coords_mask = np.logical_and.reduce(
             (line_coords[:, 0] >= 0, line_coords[:, 0] < closed_image.shape[0],
             line_coords[:, 1] >= 0, line_coords[:, 1] < closed_image.shape[1]))
-        # Extract valid coordinates
         valid_line_coords = line_coords[valid_coords_mask]
+
         # Find intersections with the binary image
         intersections_mask = closed_image[valid_line_coords[:, 0], valid_line_coords[:, 1]] > 0
-        # Get intersection points
         intersections = valid_line_coords[intersections_mask]
+
         if intersections.shape[0] > 10:
             all_centroid_x.append(np.mean(intersections[:, 1]))
             all_centroid_y.append(np.mean(intersections[:, 0]))
@@ -150,14 +149,12 @@ def center_line_session(mask_3d,df,scale_3d):
     closed_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
 
     last_pos=None
-    prox_dist_pos = None
-    interpolated_data=None
     path_layer=None
 
     non_zero_pixels = cv2.findNonZero(closed_image)
     x, y, width, height = cv2.boundingRect(non_zero_pixels)
-    y_pos=y+height-10 
-    line_data=np.array([[y_pos,0],[y_pos,im.shape[1]-1]])
+    y_pos_px=y+height
+    line_data=np.array([[y_pos_px,0],[y_pos_px,im.shape[1]-1]])
 
     viewer = napari.Viewer(ndisplay=2)
     viewer.add_shapes(data=line_data,shape_type='line',edge_color='red',edge_width=2,scale=scale_3d[[0,1]])
@@ -176,17 +173,18 @@ def center_line_session(mask_3d,df,scale_3d):
         
     @viewer.bind_key('a')
     def add_point_a(viewer):
-        nonlocal last_pos, prox_dist_pos, y_pos, interpolated_data,path_layer
+        nonlocal last_pos,path_layer
         prox_dist_pos=last_pos[1]
         if last_pos is not None:
             line_data=np.array([[0,prox_dist_pos],[im.shape[0]-1,prox_dist_pos]])/scale_3d[[0,1]]
             viewer.add_shapes(data=line_data,shape_type='line',edge_color='green',edge_width=2,scale=scale_3d[[0,1]])
 
-            path_data_rad=radial_center_line(prox_dist_pos/scale_3d[1],y_pos/scale_3d[0],closed_image)
+            path_data_rad=radial_center_line(prox_dist_pos/scale_3d[1],y_pos_px,closed_image)
             path_data_ver=vertical_center_line(prox_dist_pos/scale_3d[1],closed_image)
             path_data=np.concatenate((path_data_rad, path_data_ver), axis=0)
-            viewer.add_shapes(path_data, shape_type='path', edge_color='red', edge_width=2,scale=scale_3d[[0,1]])
             
+            viewer.add_shapes(path_data, shape_type='path', edge_color='red', edge_width=2,scale=scale_3d[[0,1]])
+           
             s=calculate_relative_positions(path_data[:,0],path_data[:,1])
             sp0=UnivariateSpline(s, path_data[:,0],k=3, s=200)
             sp1=UnivariateSpline(s, path_data[:,1],k=3, s=200)

@@ -130,52 +130,87 @@ def do_orientation(input_dirs, key_0, output_dir):
             res_MetaData['fin_side'] = fin_side
         write_JSON(paths["output"], output_key, res_MetaData)
 
-def do_center_line(orientation_dir, mask_dir,mask_key,output_dir):
-    output_key='center line'
+def do_center_line(orientation_dir, mask_dir, mask_key, output_dir):
+    """
+    Processes center lines based on orientation data and mask images, saving results to the output directory.
+    
+    Args:
+        orientation_dir (str): Directory containing orientation data folders.
+        mask_dir (str): Directory containing mask image folders.
+        mask_key (str): Key to access specific mask data in the metadata.
+        output_dir (str): Directory where the processed center line data will be saved.
+    """
+    logger = logging.getLogger(__name__)
+    output_key = 'center line'
 
-    orientation_folder_list= [item for item in os.listdir(orientation_dir) if os.path.isdir(os.path.join(orientation_dir, item))]
-    for data_name in orientation_folder_list:
-        print(data_name)
-        orientation_folder=os.path.join(orientation_dir,data_name)
-        mask_folder=os.path.join(mask_dir,data_name)
-        output_folder=os.path.join(output_dir,data_name)
+    # Gather orientation folders
+    orientation_folder_list = [
+        item for item in os.listdir(orientation_dir) if os.path.isdir(os.path.join(orientation_dir, item))
+    ]
+    logger.info(f"Found {len(orientation_folder_list)} orientation folders for processing.")
+
+    # Add a progress bar
+    for data_name in tqdm(orientation_folder_list, desc="Processing center lines", unit="dataset"):
+        logger.info(f"Processing {data_name}")
+
+        # Set up folder paths
+        orientation_folder = os.path.join(orientation_dir, data_name)
+        mask_folder = os.path.join(mask_dir, data_name)
+        output_folder = os.path.join(output_dir, data_name)
         make_path(output_folder)
 
-        res=should_process([orientation_folder,mask_folder],['orientation',mask_key],output_folder,output_key,verbose=True)
-
+        # Check if processing is needed
+        res = should_process(
+            [orientation_folder, mask_folder], ['orientation', mask_key], output_folder, output_key, verbose=True
+        )
         if not res:
+            logger.info(f"Skipping {data_name}: No processing needed.")
             continue
-        input_data,input_checksum=res
+        input_data, input_checksum = res
 
-        orientation_file=os.path.join(orientation_folder,input_data['orientation']['df file name'])
-        orientation_df=pd.read_csv(orientation_file)
+        # Load orientation data
+        orientation_file = os.path.join(orientation_folder, input_data['orientation']['df file name'])
+        orientation_df = pd.read_csv(orientation_file)
 
+        # Load mask image
         img_list = [item for item in os.listdir(mask_folder) if item.endswith('.tif')]
-        length = len(img_list)
-        if length == 1:
+        if len(img_list) == 1:
             mask_image = get_Image(os.path.join(mask_folder, img_list[0]))
         else:
-            print("Not one mask image found")
+            logger.error(f"Expected one mask image in {mask_folder}, found {len(img_list)}. Skipping {data_name}.")
             continue
 
-        center_line_path_3d=center_line_session(mask_image,orientation_df,input_data['orientation']['scale'])
+        # Process center line
+        logger.info(f"Computing center line for {data_name}.")
+        center_line_path_3d = center_line_session(
+            mask_image, orientation_df, input_data['orientation']['scale']
+        )
 
-        CenterLine_file_name=data_name+'_CenterLine.npy'
-        CenterLine_file=os.path.join(output_folder,CenterLine_file_name)
-        np.save(CenterLine_file,center_line_path_3d)
+        # Save center line data
+        CenterLine_file_name = f"{data_name}_CenterLine.npy"
+        CenterLine_file = os.path.join(output_folder, CenterLine_file_name)
+        np.save(CenterLine_file, center_line_path_3d)
 
+        # Update metadata and save
+        logger.info(f"Saving metadata for {data_name}.")
         res_MetaData = input_data['orientation']
-        res_MetaData['CenterLine file name']=CenterLine_file_name
-        res_MetaData['CenterLine checksum']=get_checksum(CenterLine_file, algorithm="SHA1")
-        res_MetaData['input_data_checksum']=input_checksum
-        repo = git.Repo('.', search_parent_directories=True)
-        sha = repo.head.object.hexsha
-        res_MetaData['git hash'] = sha
-        res_MetaData['git origin url'] = repo.remotes.origin.url
+        res_MetaData['CenterLine file name'] = CenterLine_file_name
+        res_MetaData['CenterLine checksum'] = get_checksum(CenterLine_file, algorithm="SHA1")
+        res_MetaData['input_data_checksum'] = input_checksum
+
+        # Get git information
+        try:
+            repo = git.Repo('.', search_parent_directories=True)
+            res_MetaData['git hash'] = repo.head.object.hexsha
+            res_MetaData['git origin url'] = repo.remotes.origin.url
+        except Exception as e:
+            logger.warning(f"Git information could not be retrieved: {e}")
 
         write_JSON(output_folder, output_key, res_MetaData)
 
+    logger.info("Center line processing completed.")
     return
+
 
 def do_surface(orientation_dir, center_line_dir, mask_dir, mask_key, output_dir):
     output_key = "surface"
@@ -312,3 +347,4 @@ def do_thickness(coord_dir, mask_dir, mask_key, output_dir):
         file_paths = {"Surface(Thickness)": surface_file_path}
         res_MetaData = update_metadata(input_data["coord"], file_paths, input_checksum)
         write_JSON(paths["output"], output_key, res_MetaData)
+
