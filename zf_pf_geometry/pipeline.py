@@ -211,140 +211,234 @@ def do_center_line(orientation_dir, mask_dir, mask_key, output_dir):
     logger.info("Center line processing completed.")
     return
 
-
 def do_surface(orientation_dir, center_line_dir, mask_dir, mask_key, output_dir):
-    output_key = "surface"
-    base_dirs = {"orientation": orientation_dir, "center_line": center_line_dir, "mask": mask_dir, "output": output_dir}
+    """
+    Processes surface data by combining orientation, center line, and mask data,
+    and saves the resulting surface and rip data to the output directory.
 
-    center_line_folder_list = [item for item in os.listdir(center_line_dir) if os.path.isdir(os.path.join(center_line_dir, item))]
-    for data_name in center_line_folder_list:
-        print(data_name)
+    Args:
+        orientation_dir (str): Directory containing orientation data.
+        center_line_dir (str): Directory containing center line data.
+        mask_dir (str): Directory containing mask image data.
+        mask_key (str): Key to access specific mask data in the metadata.
+        output_dir (str): Directory where the processed surface data will be saved.
+    """
+    logger = logging.getLogger(__name__)
+    output_key = "surface"
+    base_dirs = {
+        "orientation": orientation_dir,
+        "center_line": center_line_dir,
+        "mask": mask_dir,
+        "output": output_dir
+    }
+
+    # Gather center line folders
+    center_line_folder_list = [
+        item for item in os.listdir(center_line_dir) if os.path.isdir(os.path.join(center_line_dir, item))
+    ]
+    logger.info(f"Found {len(center_line_folder_list)} center line folders for processing.")
+
+    for data_name in tqdm(center_line_folder_list, desc="Processing surfaces", unit="dataset"):
+        logger.info(f"Processing dataset: {data_name}")
 
         # Setup folders
         paths = setup_folders(base_dirs, data_name)
 
         # Check if processing is needed
-        res = should_process([paths["center_line"], paths["orientation"], paths["mask"]],
-                             ["center line", "orientation", mask_key], paths["output"], output_key, verbose=True)
+        res = should_process(
+            [paths["center_line"], paths["orientation"], paths["mask"]],
+            ["center line", "orientation", mask_key],
+            paths["output"],
+            output_key
+        )
         if not res:
+            logger.info(f"Skipping {data_name}: No processing needed.")
             continue
+
         input_data, input_checksum = res
 
-        # Load files
-        orientation_df = pd.read_csv(os.path.join(paths["orientation"], input_data["orientation"]["df file name"]))
-        center_line_path_3d = np.load(os.path.join(paths["center_line"], input_data["center line"]["CenterLine file name"]))
-        mask_image = load_tif_image(paths["mask"])
+        try:
+            # Load orientation, center line, and mask data
+            orientation_file = os.path.join(paths["orientation"], input_data["orientation"]["df file name"])
+            orientation_df = pd.read_csv(orientation_file)
+            logger.info(f"Loaded orientation data from {orientation_file}.")
 
-        # Process surface
-        smooth_surface, rip_df = construct_Surface(mask_image, orientation_df, center_line_path_3d, input_data["orientation"]["scale"])
+            center_line_file = os.path.join(paths["center_line"], input_data["center line"]["CenterLine file name"])
+            center_line_path_3d = np.load(center_line_file)
+            logger.info(f"Loaded center line data from {center_line_file}.")
 
-        # Save results
-        rip_file = os.path.join(paths["output"], f"{data_name}_rip.csv")
-        rip_df.to_csv(rip_file, index=False)
-        surface_file = os.path.join(paths["output"], f"{data_name}_surface.vtk")
-        smooth_surface.save(surface_file)
+            mask_image = load_tif_image(paths["mask"])
+            logger.info(f"Loaded mask image from {paths['mask']}.")
 
-        # Update and write metadata
-        file_paths = {"Surface": surface_file, "Rip": rip_file}
-        res_MetaData = update_metadata(input_data["center line"], file_paths, input_checksum)
-        write_JSON(paths["output"], output_key, res_MetaData)
+            # Process surface
+            logger.info(f"Constructing surface for {data_name}.")
+            smooth_surface, rip_df = construct_Surface(
+                mask_image, orientation_df, center_line_path_3d, input_data["orientation"]["scale"]
+            )
+
+            # Save rip data
+            rip_file = os.path.join(paths["output"], f"{data_name}_rip.csv")
+            rip_df.to_csv(rip_file, index=False)
+            logger.info(f"Saved rip data to {rip_file}.")
+
+            # Save surface data
+            surface_file = os.path.join(paths["output"], f"{data_name}_surface.vtk")
+            smooth_surface.save(surface_file)
+            logger.info(f"Saved surface data to {surface_file}.")
+
+            # Update and write metadata
+            file_paths = {"Surface": surface_file, "Rip": rip_file}
+            res_MetaData = update_metadata(input_data["center line"], file_paths, input_checksum)
+            write_JSON(paths["output"], output_key, res_MetaData)
+            logger.info(f"Updated and saved metadata for {data_name}.")
+
+        except Exception as e:
+            logger.error(f"Error processing {data_name}: {e}")
+            continue
+
+    logger.info("Surface processing completed.")
 
 def do_coord(orientation_dir, surface_dir, output_dir):
     """
     Processes surface and orientation data to create a coordinate system and saves the results.
+    
     Args:
         orientation_dir (str): Path to the directory containing orientation data.
         surface_dir (str): Path to the directory containing surface data.
         output_dir (str): Path to save output data.
     """
+    logger = logging.getLogger(__name__)
     output_key = 'coord'
     base_dirs = {"surface": surface_dir, "orientation": orientation_dir, "output": output_dir}
 
-    surface_folder_list = [item for item in os.listdir(surface_dir) if os.path.isdir(os.path.join(surface_dir, item))]
-    for data_name in surface_folder_list:
-        print(data_name)
+    # Gather surface folders
+    surface_folder_list = [
+        item for item in os.listdir(surface_dir) if os.path.isdir(os.path.join(surface_dir, item))
+    ]
+    logger.info(f"Found {len(surface_folder_list)} surface folders for processing.")
+
+    # Add progress bar
+    for data_name in tqdm(surface_folder_list, desc="Processing coordinates", unit="dataset"):
+        logger.info(f"Processing dataset: {data_name}")
 
         # Setup folders
         paths = setup_folders(base_dirs, data_name)
 
         # Check if processing is needed
         res = should_process([paths["surface"], paths["orientation"]],
-                             ['surface', 'orientation'], paths["output"], output_key, verbose=True)
+                             ['surface', 'orientation'], paths["output"], output_key)
         if not res:
+            logger.info(f"Skipping {data_name}: No processing needed.")
             continue
+
         input_data, input_checksum = res
 
+
         # Load input files
-        orientation_df = pd.read_csv(os.path.join(paths["orientation"], input_data["orientation"]["df file name"]))
+        orientation_file = os.path.join(paths["orientation"], input_data["orientation"]["df file name"])
+        orientation_df = pd.read_csv(orientation_file)
+        logger.info(f"Loaded orientation data from {orientation_file}.")
+
         surface_file = os.path.join(paths["surface"], input_data["surface"]["Surface file name"])
         mesh = pv.read(surface_file)
+        logger.info(f"Loaded surface data from {surface_file}.")
 
         rip_file = os.path.join(paths["surface"], input_data["surface"]["Rip file name"])
         rip_df = pd.read_csv(rip_file)
+        logger.info(f"Loaded rip data from {rip_file}.")
 
         # Process mesh to create coordinate system
+        logger.info(f"Creating coordinate system for {data_name}.")
         mesh = create_coord_system(mesh, orientation_df, rip_df, input_data["surface"]["scale"])
         if mesh is None:
-            print(f"Failed to create coordinate system for {data_name}. Skipping.")
+            logger.error(f"Failed to create coordinate system for {data_name}. Skipping.")
             continue
 
         # Calculate curvature tensor
+        logger.info(f"Calculating curvature tensor for {data_name}.")
         res = calculateCurvatureTensor(mesh)
         if res is None:
-            print(f"Failed to calculate curvature tensor for {data_name}. Skipping.")
+            logger.error(f"Failed to calculate curvature tensor for {data_name}. Skipping.")
             continue
 
         # Save the resulting mesh
         surface_file_name = f"{data_name}_coord.vtk"
         surface_file_path = os.path.join(paths["output"], surface_file_name)
         mesh.save(surface_file_path)
+        logger.info(f"Saved coordinate mesh to {surface_file_path}.")
 
         # Update metadata and save
         file_paths = {"Surface(Coord)": surface_file_path}
         res_MetaData = update_metadata(input_data["surface"], file_paths, input_checksum)
         write_JSON(paths["output"], output_key, res_MetaData)
+        logger.info(f"Updated and saved metadata for {data_name}.")
+
+       
+
+    logger.info("Coordinate processing completed.")
 
 def do_thickness(coord_dir, mask_dir, mask_key, output_dir):
     """
     Processes coordinate and mask data to calculate thickness and saves the results.
+    
     Args:
         coord_dir (str): Path to the directory containing coordinate data.
         mask_dir (str): Path to the directory containing mask data.
         mask_key (str): Key for accessing mask metadata.
         output_dir (str): Path to save output data.
     """
+    logger = logging.getLogger(__name__)
     output_key = 'thickness'
     base_dirs = {"coord": coord_dir, "mask": mask_dir, "output": output_dir}
 
-    coord_folder_list = [item for item in os.listdir(coord_dir) if os.path.isdir(os.path.join(coord_dir, item))]
-    for data_name in coord_folder_list:
-        print(data_name)
+    # Gather coordinate folders
+    coord_folder_list = [
+        item for item in os.listdir(coord_dir) if os.path.isdir(os.path.join(coord_dir, item))
+    ]
+    logger.info(f"Found {len(coord_folder_list)} coordinate folders for processing.")
+
+    # Add progress bar
+    for data_name in tqdm(coord_folder_list, desc="Processing thickness", unit="dataset"):
+        logger.info(f"Processing dataset: {data_name}")
 
         # Setup folders
         paths = setup_folders(base_dirs, data_name)
 
         # Check if processing is needed
         res = should_process([paths["coord"], paths["mask"]],
-                             ['coord', mask_key], paths["output"], output_key, verbose=True)
+                             ['coord', mask_key], paths["output"], output_key)
         if not res:
+            logger.info(f"Skipping {data_name}: No processing needed.")
             continue
+
         input_data, input_checksum = res
 
+        
         # Load input files
         surface_file = os.path.join(paths["coord"], input_data["coord"]["Surface(Coord) file name"])
         mesh = pv.read(surface_file)
+        logger.info(f"Loaded surface data from {surface_file}.")
+
         mask_image = load_tif_image(paths["mask"])
+        logger.info(f"Loaded mask image from {paths['mask']}.")
 
         # Process thickness
+        logger.info(f"Calculating thickness for {data_name}.")
         mesh = calculate_Thickness(mask_image, mesh, input_data["coord"]["scale"])
 
         # Save the resulting mesh
         surface_file_name = f"{data_name}_thickness.vtk"
         surface_file_path = os.path.join(paths["output"], surface_file_name)
         mesh.save(surface_file_path)
+        logger.info(f"Saved thickness mesh to {surface_file_path}.")
 
         # Update metadata and save
         file_paths = {"Surface(Thickness)": surface_file_path}
         res_MetaData = update_metadata(input_data["coord"], file_paths, input_checksum)
         write_JSON(paths["output"], output_key, res_MetaData)
+        logger.info(f"Updated and saved metadata for {data_name}.")
+
+        
+
+    logger.info("Thickness processing completed.")
 

@@ -203,7 +203,7 @@ def center_line_session(mask_3d,df,scale_3d):
 
     napari.run()
     try:
-        resulting_path = path_layer.data[0] 
+        resulting_path = path_layer.data[0]/scale_3d[[0,1]]
     except:
         return None
  

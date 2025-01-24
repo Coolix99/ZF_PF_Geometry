@@ -149,8 +149,9 @@ def create_2d_image_from_3d(center_plane_point,direction_2 ,direction_1 , size_2
            (x_3d >= 0) & (x_3d < image_3d.shape[2])
 
     image_2d = np.zeros(size_2d)
+    if not np.any(mask):
+        return image_2d  # Return an empty image if no valid points are found
     image_2d[mask] = image_3d[z_3d[mask], y_3d[mask], x_3d[mask]]
-
     return image_2d
 
 def vertical_center_line(prox_dist_pos,closed_image):
@@ -161,9 +162,10 @@ def vertical_center_line(prox_dist_pos,closed_image):
     all_centroid_y=[]
     for x_pos in range(int(start_vertical_position),end_vertical_position):
         horizontal_lines = closed_image[:,x_pos]
-        mean_positions = np.mean(np.where(horizontal_lines > 0))
-        if math.isnan(mean_positions):
-            continue
+        non_zero_indices = np.where(horizontal_lines > 0)[0]
+        if non_zero_indices.size == 0:
+            continue  # Skip if no non-zero elements are found
+        mean_positions = np.mean(non_zero_indices)
         all_centroid_y.append(mean_positions)
         all_centroid_x.append(x_pos)
     
@@ -205,7 +207,7 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     direction_1[:]=plane_normal[:]
     rel_position=np.linspace(0,1,100)
     for i in range(rel_position.shape[0]):
-        print(i)
+        #print(i)
         ind,x,y,z=interpolate_path(center_line_path_3d,t,rel_position[i])
         center_plane_point=np.array((x,y,z))
         if(ind==center_line_path_3d.shape[0]):
@@ -261,14 +263,14 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     
 
     df = pd.DataFrame(data)
-    print(df)
-    print(df['AP_position mum'])
-    get_first_element = lambda x: x[0]
-    min_first_element = df['AP_position mum'].apply(get_first_element).min()
-    print("Min of the first elements:", min_first_element)
-    get_last_element = lambda x: x[-1]
-    max_last_element = df['AP_position mum'].apply(get_last_element).max()
-    print("Maximum of the last elements:", max_last_element)
+    # print(df)
+    # print(df['AP_position mum'])
+    #get_first_element = lambda x: x[0]
+    #min_first_element = df['AP_position mum'].apply(get_first_element).min()
+    # print("Min of the first elements:", min_first_element)
+    #get_last_element = lambda x: x[-1]
+    #max_last_element = df['AP_position mum'].apply(get_last_element).max()
+    # print("Maximum of the last elements:", max_last_element)
     
     P=df['path px'][0]
     P_mum=P*scales
@@ -332,7 +334,7 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     df.drop(columns=['AP_position mum'], inplace=True)
     df[['CP_z px', 'CP_y px', 'CP_x px']] = pd.DataFrame(df['center_point px'].tolist(), index=df.index)
     df.drop(columns=['center_point px'], inplace=True)
-    print(df)
+    # print(df)
     return smooth_surface,df
 
 

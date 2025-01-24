@@ -1,10 +1,7 @@
 import numpy as np
 np.random.seed(42)
 from typing import List
-import pandas as pd
-from bisect import bisect_right
-import pyvista as pv
-from scipy.spatial import cKDTree
+from tqdm import tqdm
 import numpy as np
 
 
@@ -44,7 +41,7 @@ def doTransportIntegration(points,path,coord_1,coord_2,visited,direction_1,direc
 def create_coord_system(mesh,orientation_df,rip_df,scales):
     view_dir=orientation_df.loc[orientation_df['name'] == 'e_n', ['z', 'y', 'x']].values[0]
     view_dir=view_dir/np.linalg.norm(view_dir)
-    print(rip_df)
+    #print(rip_df)
     center_Line = np.stack(rip_df[['CP_z px', 'CP_y px', 'CP_x px']].values)*scales
 
     #determine center point with direction
@@ -70,9 +67,7 @@ def create_coord_system(mesh,orientation_df,rip_df,scales):
     direction_1[center_ind]=np.cross(direction_2[center_ind],mesh.point_normals[center_ind])
 
 
-    for i in range(mesh.points.shape[0]):
-        if i%100==0:
-            print(i)
+    for i in tqdm(range(mesh.points.shape[0]), desc="Processing mesh points", unit="point"):
         if visited[i]:
             continue
         try:
@@ -93,9 +88,7 @@ def calculateCurvatureTensor(mesh):
 
     curvature_tensors=np.zeros((mesh.n_points,2,2),dtype=float)
 
-    for i in range(mesh.n_points):
-        if i%100==0:
-            print(i)
+    for i in tqdm(range(mesh.n_points), desc="Processing mesh points", unit="point"):
         mask = np.any(cells == i, axis=1)
         cells_including_vertex = cells[mask]
         neighbors = np.unique(cells_including_vertex[cells_including_vertex != i])
