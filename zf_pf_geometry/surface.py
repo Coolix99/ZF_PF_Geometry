@@ -71,7 +71,7 @@ def get_Plane(point1, point2, direction_dv,im_3d,centroid_3d):
 
     size_2d = (100,np.max(im_3d.shape)+50)
 
-    direction_1 = np.array([0, point2[1]-point1[1], point2[2]-point1[2]])  # You can adjust the x and y components as needed
+    direction_1 = np.array([0, point2[1]-point1[1], point2[2]-point1[2]])  
     dot_product = np.dot(direction_1, plane_normal)
     direction_1 -= dot_product / np.dot(plane_normal, plane_normal) * plane_normal
     direction_1 = direction_1 / np.linalg.norm(direction_1)
@@ -191,8 +191,18 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     point1 = df.loc[df['name'] == 'Proximal_pt', ['z', 'y', 'x']].values[0]/scale_3d
     point2 = df.loc[df['name'] == 'Distal_pt', ['z', 'y', 'x']].values[0]/scale_3d
     direction_dv = df.loc[df['name'] == 'e_n', ['z', 'y', 'x']].values[0]/scale_3d
-
+    direction_dv=direction_dv/np.linalg.norm(direction_dv)
     im_3d=process_image(mask)
+
+    print(im_3d.shape)
+    print(center_line_path_3d.shape)
+    print(center_line_path_3d)
+
+    import napari
+    viewer=napari.Viewer(ndisplay=3)
+    viewer.add_labels(im_3d)
+    viewer.add_shapes(center_line_path_3d, shape_type='path', edge_color='green', edge_width=2)
+    napari.run()
 
     centroid_3d = ndimage.center_of_mass(im_3d)
 
@@ -247,6 +257,7 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
         positions_AP=positions_AP-mid_pos 
         all_lines_AP.append(positions_AP)
 
+    print(all_lines_PD)
     L=calculate_positions_3d(center_line_path_3d[:,0],center_line_path_3d[:,1],center_line_path_3d[:,2],scales)[-1]
     all_lines_PD=np.array(all_lines_PD-all_lines_PD[0])*L
    

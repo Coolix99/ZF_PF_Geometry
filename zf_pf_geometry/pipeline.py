@@ -257,45 +257,42 @@ def do_surface(orientation_dir, center_line_dir, mask_dir, mask_key, output_dir)
 
         input_data, input_checksum = res
 
-        try:
-            # Load orientation, center line, and mask data
-            orientation_file = os.path.join(paths["orientation"], input_data["orientation"]["df file name"])
-            orientation_df = pd.read_csv(orientation_file)
-            logger.info(f"Loaded orientation data from {orientation_file}.")
 
-            center_line_file = os.path.join(paths["center_line"], input_data["center line"]["CenterLine file name"])
-            center_line_path_3d = np.load(center_line_file)
-            logger.info(f"Loaded center line data from {center_line_file}.")
+        # Load orientation, center line, and mask data
+        orientation_file = os.path.join(paths["orientation"], input_data["orientation"]["df file name"])
+        orientation_df = pd.read_csv(orientation_file)
+        logger.info(f"Loaded orientation data from {orientation_file}.")
 
-            mask_image = load_tif_image(paths["mask"])
-            logger.info(f"Loaded mask image from {paths['mask']}.")
+        center_line_file = os.path.join(paths["center_line"], input_data["center line"]["CenterLine file name"])
+        center_line_path_3d = np.load(center_line_file)
+        logger.info(f"Loaded center line data from {center_line_file}.")
 
-            # Process surface
-            logger.info(f"Constructing surface for {data_name}.")
-            smooth_surface, rip_df = construct_Surface(
-                mask_image, orientation_df, center_line_path_3d, input_data["orientation"]["scale"]
-            )
+        mask_image = load_tif_image(paths["mask"])
+        logger.info(f"Loaded mask image from {paths['mask']}.")
 
-            # Save rip data
-            rip_file = os.path.join(paths["output"], f"{data_name}_rip.csv")
-            rip_df.to_csv(rip_file, index=False)
-            logger.info(f"Saved rip data to {rip_file}.")
+        # Process surface
+        logger.info(f"Constructing surface for {data_name}.")
+        smooth_surface, rip_df = construct_Surface(
+            mask_image, orientation_df, center_line_path_3d, input_data["orientation"]["scale"]
+        )
 
-            # Save surface data
-            surface_file = os.path.join(paths["output"], f"{data_name}_surface.vtk")
-            smooth_surface.save(surface_file)
-            logger.info(f"Saved surface data to {surface_file}.")
+        # Save rip data
+        rip_file = os.path.join(paths["output"], f"{data_name}_rip.csv")
+        rip_df.to_csv(rip_file, index=False)
+        logger.info(f"Saved rip data to {rip_file}.")
 
-            # Update and write metadata
-            file_paths = {"Surface": surface_file, "Rip": rip_file}
-            res_MetaData = update_metadata(input_data["center line"], file_paths, input_checksum)
-            write_JSON(paths["output"], output_key, res_MetaData)
-            logger.info(f"Updated and saved metadata for {data_name}.")
+        # Save surface data
+        surface_file = os.path.join(paths["output"], f"{data_name}_surface.vtk")
+        smooth_surface.save(surface_file)
+        logger.info(f"Saved surface data to {surface_file}.")
 
-        except Exception as e:
-            logger.error(f"Error processing {data_name}: {e}")
-            continue
+        # Update and write metadata
+        file_paths = {"Surface": surface_file, "Rip": rip_file}
+        res_MetaData = update_metadata(input_data["center line"], file_paths, input_checksum)
+        write_JSON(paths["output"], output_key, res_MetaData)
+        logger.info(f"Updated and saved metadata for {data_name}.")
 
+        
     logger.info("Surface processing completed.")
 
 def do_coord(orientation_dir, surface_dir, output_dir):

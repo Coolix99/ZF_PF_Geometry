@@ -131,6 +131,7 @@ def center_line_session(mask_3d,df,scale_3d):
     point1 = point1 / scale_3d
     point2 = point2 / scale_3d
     direction_dv = direction_dv / scale_3d
+    direction_dv = direction_dv / np.linalg.norm(direction_dv)
 
     centroid_3d=np.array(mask_3d.shape,dtype=float)/2
 
@@ -208,7 +209,14 @@ def center_line_session(mask_3d,df,scale_3d):
         return None
  
     z_3d, y_3d, x_3d=map_2d_to_3d(center_plane_point, direction_1, direction_2, size_2d, resulting_path[:,0],resulting_path[:,1])
-    center_line_path_3d = np.column_stack((z_3d, y_3d, x_3d))*scale_3d
+    center_line_path_3d = np.column_stack((z_3d, y_3d, x_3d))#*scale_3d
+
+    viewer = napari.Viewer(ndisplay=3)
+    viewer.add_image(mask_3d)
+    viewer.add_shapes(data=center_line_path_3d, shape_type='path', edge_color='red', edge_width=2)
+    napari.run()
+
+
     return center_line_path_3d
 
 
