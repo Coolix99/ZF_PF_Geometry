@@ -42,7 +42,7 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
         last_viewer_direction = event.view_direction
         logger.debug(f"Position: {event.position}, View Direction: {event.view_direction}, Dims Displayed: {event.dims_displayed}")
 
-    def add_point(viewer, color, points_data_key,n_previous=1):
+    def add_point(viewer, color, points_data_key, n_previous=1):
         nonlocal points, last_pos, points_data, line_layer
         points.append(last_pos)
         line = np.array([points])
@@ -54,16 +54,19 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
         except Exception as e:
             logger.debug(f"Exception caught: {e}")
 
-        for i in range(n_previous):
+        for _ in range(n_previous):
             viewer.layers.select_previous()
         points_data.append({'coordinate_mum': np.array(points[0]), 'name': points_data_key[0]})
         points_data.append({'coordinate_mum': np.array(points[1]), 'name': points_data_key[1]})
         points_data.append({'coordinate_mum': last_viewer_direction, 'name': points_data_key[2]})
 
-    @viewer.bind_key('a')
-    def first(viewer):
+    def set_first_point(viewer):
         nonlocal points, last_pos
         points = [last_pos]
+
+    @viewer.bind_key('a')
+    def first(viewer):
+        set_first_point(viewer)
 
     @viewer.bind_key('b')
     def second(viewer):
@@ -71,17 +74,15 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
 
     @viewer.bind_key('c')
     def first2(viewer):
-        nonlocal points, last_pos
-        points = [last_pos]
+        set_first_point(viewer)
 
     @viewer.bind_key('d')
     def second2(viewer):
-        add_point(viewer, 'green', ['Anterior_pt', 'Posterior_pt', 'viewer_direction_DP'],2)
+        add_point(viewer, 'green', ['Anterior_pt', 'Posterior_pt', 'viewer_direction_DP'], 2)
 
     @viewer.bind_key('e')
     def first3(viewer):
-        nonlocal points, last_pos
-        points = [last_pos]
+        set_first_point(viewer)
 
     @viewer.bind_key('f')
     def second3(viewer):
@@ -117,5 +118,10 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
     view_1 = extract_coordinate(df, 'viewer_direction_DV')
     v1 = v1 - view_1 * (np.dot(v1, n) / np.dot(view_1, n)) 
     v1 = v1 / np.linalg.norm(v1)
+
+    new_rows = pd.DataFrame({'coordinate_mum': [n,v1], 'name': ['e_n','e_PD']})
+    df = pd.concat([df, new_rows], ignore_index=True)
+    df[['z', 'y', 'x']] = pd.DataFrame(df['coordinate_mum'].tolist(), index=df.index)
+    df.drop(columns=['coordinate_mum'], inplace=True)
 
     return df, fin_side
