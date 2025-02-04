@@ -2,6 +2,9 @@ import numpy as np
 import napari
 import pandas as pd
 from typing import List,Tuple
+import logging
+
+logger = logging.getLogger(__name__)
 
 from zf_pf_geometry.utils import check_array_type
 
@@ -12,7 +15,7 @@ def extract_coordinate(df, name):
     else:
         return None
 
-def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=True) -> Tuple[pd.DataFrame,str]:
+def orientation_session(images:List[np.ndarray],scale:List[float]) -> Tuple[pd.DataFrame,str]:
     viewer = napari.Viewer(ndisplay=3)
     im_layer=None
     for img in images:
@@ -37,11 +40,7 @@ def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=T
         )
         last_pos=event.position
         last_viewer_direction=event.view_direction
-        if verbose:
-            print(event.position,
-                event.view_direction,
-                event.dims_displayed)
-        
+
     @viewer.bind_key('a')
     def first(viewer):
         nonlocal points,last_pos
@@ -52,15 +51,11 @@ def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=T
         nonlocal points,last_pos,points_data,line_layer
         points.append(last_pos)
         line = np.array([points])
-        if verbose:
-            print(line)
-            print(viewer.camera)
-            print(viewer)
+
         try:
             line_layer=viewer.add_shapes(line, shape_type='line', edge_color='red', edge_width=2)
         except:
-            if verbose:
-                print('catched')
+            logger.debug('catched')
 
         viewer.layers.select_previous()
         points_data = [
@@ -82,8 +77,7 @@ def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=T
         try:
             line_layer=viewer.add_shapes(line, shape_type='line', edge_color='green', edge_width=2)
         except:
-            if verbose:
-                print('catched')
+            logger.debug('catched')
         viewer.layers.select_previous()
         viewer.layers.select_previous()
         points_data =points_data+ [
@@ -105,8 +99,8 @@ def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=T
         try:
             line_layer=viewer.add_shapes(line, shape_type='line', edge_color='blue', edge_width=2)
         except:
-            if verbose:
-                print('catched')
+            logger.debug('catched')
+
         viewer.layers.select_previous()
         viewer.layers.select_previous()
         viewer.layers.select_previous()
@@ -154,45 +148,6 @@ def orientation_session(images:List[np.ndarray],scale:List[float],verbose:bool=T
     df = pd.concat([df, new_rows], ignore_index=True)
     df[['z', 'y', 'x']] = pd.DataFrame(df['coordinate_mum'].tolist(), index=df.index)
     df.drop(columns=['coordinate_mum'], inplace=True)
-    if verbose:
-        print(df)
-
-    # Debug visualization
-    # viewer = napari.Viewer(ndisplay=3)
-
-    # # Add the image back
-    # for img in images:
-    #     if check_array_type(img) == 'discrete':
-    #         viewer.add_labels(img, scale=scale)
-    #     else:
-    #         viewer.add_image(img, scale=scale)
-
-    # # Plot all points
-    # points = df[['z', 'y', 'x']].values
-    # colors = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan']
-    # point_names= ['Proximal_pt', 'Distal_pt', 'Anterior_pt', 'Posterior_pt', 'Proximal2_pt', 'Distal2_pt']
-
-    # color_map = {name: colors[i % len(colors)] for i, name in enumerate(point_names)}
-
-    # viewer.add_points(points, size=5, edge_color=[color_map[name] for name in point_names])
-
-    # line = np.array([df.loc[df['name'] == 'Proximal_pt', ['z', 'y', 'x']].values[0], df.loc[df['name'] == 'Distal_pt', ['z', 'y', 'x']].values[0]])
-    # line_layer=viewer.add_shapes(line, shape_type='line', edge_color='red', edge_width=2)
-    # line = np.array([df.loc[df['name'] == 'Proximal2_pt', ['z', 'y', 'x']].values[0], df.loc[df['name'] == 'Distal2_pt', ['z', 'y', 'x']].values[0]])
-    # line_layer=viewer.add_shapes(line, shape_type='line', edge_color='blue', edge_width=2)
-    # line = np.array([df.loc[df['name'] == 'Anterior_pt', ['z', 'y', 'x']].values[0], df.loc[df['name'] == 'Posterior_pt', ['z', 'y', 'x']].values[0]])
-    # line_layer=viewer.add_shapes(line, shape_type='line', edge_color='green', edge_width=2)
-
-    # # Plot vectors
-    # length = 100
-    # direction_vectors = np.array([
-    #     [df.loc[df['name'] == 'Proximal_pt', ['z', 'y', 'x']].values[0], v1 * length],
-    #     [df.loc[df['name'] == 'Proximal_pt', ['z', 'y', 'x']].values[0], n * length]
-    # ])
-
-    # viewer.add_vectors(direction_vectors, edge_color='cyan')
-
-    # napari.run()
 
     return df, fin_side
 
