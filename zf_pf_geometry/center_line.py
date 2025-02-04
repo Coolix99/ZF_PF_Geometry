@@ -8,15 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def define_plane(point1, point2, direction):
-    """
-    Define a plane given two points and a direction.
-    """
-    v = np.array(point2) - np.array(point1)
-    normal = np.cross(v, np.array(direction))
-    normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
-    return normal, np.array(point1)
-
 def map_2d_to_3d(center_plane_point, direction_1, direction_2, size_2d, y_2d, x_2d):
     """
     Map 2D coordinates to 3D coordinates.

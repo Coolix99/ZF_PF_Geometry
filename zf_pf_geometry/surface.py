@@ -1,7 +1,5 @@
 import numpy as np
 import cv2
-import math
-from typing import List
 import pandas as pd
 import networkx as nx
 from scipy import ndimage
@@ -10,7 +8,6 @@ import pyvista as pv
 import pymeshfix as mf
 from scipy.spatial import cKDTree
 from scipy.ndimage import label, binary_fill_holes
-
 
 def calculate_positions_3d(x_positions, y_positions, z_positions,scales):
     x_diff = np.diff(x_positions)*scales[0]
@@ -91,8 +88,7 @@ def calculate_relative_positions_3d(x_positions, y_positions, z_positions,scales
 
 def interpolate_path(path,s_values, s_position):
     if s_values.shape[0]!=path.shape[0]:
-        raise ValueError("s_values and path not same length")
-
+        raise ValueError(f"Mismatch: s_values has {s_values.shape[0]} values, path has {path.shape[0]} points")
 
     if s_position < 0 or s_position > 1:
         raise ValueError("s_position should be between 0 and 1")
@@ -158,18 +154,10 @@ def vertical_center_line(prox_dist_pos,closed_image):
     start_vertical_position = prox_dist_pos
     end_vertical_position = np.max(np.where(np.any(closed_image > 0, axis=0)))
 
-    all_centroid_x=[]
-    all_centroid_y=[]
-    for x_pos in range(int(start_vertical_position),end_vertical_position):
-        horizontal_lines = closed_image[:,x_pos]
-        non_zero_indices = np.where(horizontal_lines > 0)[0]
-        if non_zero_indices.size == 0:
-            continue  # Skip if no non-zero elements are found
-        mean_positions = np.mean(non_zero_indices)
-        all_centroid_y.append(mean_positions)
-        all_centroid_x.append(x_pos)
-    
-    res=np.array((all_centroid_y,all_centroid_x)).T
+    x_indices = np.arange(int(start_vertical_position), end_vertical_position)
+    y_indices = [np.mean(np.where(closed_image[:, x] > 0)[0]) if np.any(closed_image[:, x] > 0) else np.nan for x in x_indices]
+    valid_mask = ~np.isnan(y_indices)  # Remove NaNs
+    res = np.column_stack((np.array(y_indices)[valid_mask], x_indices[valid_mask]))
     return res
 
 def process_image(im_3d):
@@ -181,9 +169,7 @@ def process_image(im_3d):
 
     largest_component_label = np.argmax(np.bincount(labeled_array.flat)[1:]) + 1
     largest_component = labeled_array == largest_component_label
-    filled_component = binary_fill_holes(largest_component)
-
-    return filled_component
+    return binary_fill_holes(largest_component)
 
 def construct_Surface(mask,df,center_line_path_3d,scales):
     scale_3d = np.array(scales)
@@ -193,16 +179,6 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     direction_dv = df.loc[df['name'] == 'e_n', ['z', 'y', 'x']].values[0]/scale_3d
     direction_dv=direction_dv/np.linalg.norm(direction_dv)
     im_3d=process_image(mask)
-
-    print(im_3d.shape)
-    print(center_line_path_3d.shape)
-    print(center_line_path_3d)
-
-    import napari
-    viewer=napari.Viewer(ndisplay=3)
-    viewer.add_labels(im_3d)
-    viewer.add_shapes(center_line_path_3d, shape_type='path', edge_color='green', edge_width=2)
-    napari.run()
 
     centroid_3d = ndimage.center_of_mass(im_3d)
 
@@ -251,22 +227,14 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
         all_lines_PD.append(rel_position[i])
         all_lines_centerPoint.append(center_plane_point)
 
-        positions_AP=calculate_positions_3d(z_3d, y_3d, x_3d,scales)
-        mid_pos=closest_position_on_path(line_path_3d*scales,center_plane_point*scales)
-        #print(mid_pos)
-        positions_AP=positions_AP-mid_pos 
+        mid_pos = closest_position_on_path(line_path_3d * scales, center_plane_point * scales)
+        positions_AP = calculate_positions_3d(z_3d, y_3d, x_3d, scales) - mid_pos
         all_lines_AP.append(positions_AP)
 
-    print(all_lines_PD)
+
     L=calculate_positions_3d(center_line_path_3d[:,0],center_line_path_3d[:,1],center_line_path_3d[:,2],scales)[-1]
     all_lines_PD=np.array(all_lines_PD-all_lines_PD[0])*L
-   
-    # viewer = napari.Viewer(ndisplay=3)
-    # im_layer = viewer.add_labels(im_3d)
-    # for i in range(len(all_lines_3d)):
-    #     viewer.add_shapes(all_lines_3d[i], shape_type='path', edge_color='green', edge_width=2)
-    # napari.run()
-      
+
     data = {'path px': all_lines_3d, 
             'PD_position mum': all_lines_PD,
             'center_point px': all_lines_centerPoint,
@@ -274,15 +242,7 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     
 
     df = pd.DataFrame(data)
-    # print(df)
-    # print(df['AP_position mum'])
-    #get_first_element = lambda x: x[0]
-    #min_first_element = df['AP_position mum'].apply(get_first_element).min()
-    # print("Min of the first elements:", min_first_element)
-    #get_last_element = lambda x: x[-1]
-    #max_last_element = df['AP_position mum'].apply(get_last_element).max()
-    # print("Maximum of the last elements:", max_last_element)
-    
+
     P=df['path px'][0]
     P_mum=P*scales
     P_coord=np.zeros((P.shape[0],2))
@@ -345,7 +305,7 @@ def construct_Surface(mask,df,center_line_path_3d,scales):
     df.drop(columns=['AP_position mum'], inplace=True)
     df[['CP_z px', 'CP_y px', 'CP_x px']] = pd.DataFrame(df['center_point px'].tolist(), index=df.index)
     df.drop(columns=['center_point px'], inplace=True)
-    # print(df)
+
     return smooth_surface,df
 
 

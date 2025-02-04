@@ -5,21 +5,14 @@ from tqdm import tqdm
 import numpy as np
 
 
-def get_coordinate_by_name(df, name):
-    print(df,name)
-    row = df[df['name'] == name]
-    if not row.empty:
-        return row['z','y','x'].iloc[0]
-    else:
-        return None
-
 def doTransportIntegration(points,path,coord_1,coord_2,visited,direction_1,direction_2,normals):
     for i in range(len(path)-1):
         if visited[path[i+1]]:
             continue
         direction_1[path[i+1]]=direction_1[path[i]]
-        direction_2[path[i+1]]=np.cross(normals[path[i+1]],direction_1[path[i+1]])
-        direction_2[path[i+1]]=direction_2[path[i+1]]/np.linalg.norm(direction_2[path[i+1]])
+        direction_2[path[i+1]] = np.cross(normals[path[i+1]], direction_1[path[i+1]])
+        direction_2[path[i+1]] /= np.linalg.norm(direction_2[path[i+1]])
+
         direction_1[path[i+1]]=np.cross(direction_2[path[i+1]],normals[path[i+1]])
         
         dr=points[path[i+1]]-points[path[i]]
@@ -99,13 +92,13 @@ def calculateCurvatureTensor(mesh):
         nn=len(neighbors)
         curvatures=np.zeros((nn,3),dtype=float)
         directions=np.zeros((nn,3),dtype=float)
-        for k,n in enumerate(neighbors):
-            normal2=mesh.point_normals[n]
-            point2=mesh.points[n]
-            dr=point2 - point1
-            d = np.linalg.norm(dr)
-            curvatures[k] = (normal2-normal1) / d
-            directions[k] = dr/d
+        neighbor_points = mesh.points[neighbors]
+        neighbor_normals = mesh.point_normals[neighbors]
+        dr = neighbor_points - point1
+        d = np.linalg.norm(dr, axis=1, keepdims=True) + 1e-8  # Avoid division by zero
+        curvatures = (neighbor_normals - normal1) / d
+        directions = dr / d
+
 
         direction2d=np.zeros((curvatures.shape[0],2),dtype=float)
         direction2d[:,0]=np.dot(directions,mesh.point_data['direction_1'][i])

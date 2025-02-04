@@ -1,17 +1,14 @@
 import numpy as np
-from typing import List
 import pyvista as pv
 from scipy.ndimage import label, binary_fill_holes
 import skimage as ski
 
 
 def getPx(r0,normal,a,vol_img):
-    coord=np.array((int(r0[0]+0.5+normal[0]*a),int(r0[1]+0.5+normal[1]*a),int(r0[2]+0.5+normal[2]*a)),dtype=int)
+    coord = np.round(r0 + normal * a).astype(int)
+    coord = np.clip(coord, 0, np.array(vol_img.shape) - 1)  # Ensure within bounds
+    return vol_img[tuple(coord)]
 
-    if np.all(coord >= 0) and np.all(coord < np.array(vol_img.shape)):
-        return vol_img[coord[0], coord[1], coord[2]]
-    else:
-        return 0
 
 def getIntersections(vol_img,r0,normal,max_value=50,precision=1):
     start=None

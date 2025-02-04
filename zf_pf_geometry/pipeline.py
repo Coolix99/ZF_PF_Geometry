@@ -14,6 +14,7 @@ from zf_pf_geometry.surface import construct_Surface
 from zf_pf_geometry.coord import create_coord_system, calculateCurvatureTensor
 from zf_pf_geometry.thickness import calculate_Thickness
 from zf_pf_geometry.utils import make_path, load_tif_image
+from zf_pf_geometry.check_results_plot import plot_all_surfaces
 
 
 
@@ -421,4 +422,19 @@ def do_thickness(coord_dir, mask_dir, mask_key, output_dir):
         
 
     logger.info("Thickness processing completed.")
+
+def do_all(input_dirs,key_0,mask_dir,mask_key,output_dir,check_surfaces=True):
+    orientation_dir=output_dir
+    center_line_dir=output_dir
+    surface_dir=output_dir
+    coord_dir=output_dir
+
+    do_orientation(input_dirs, key_0, output_dir)
+    do_center_line(orientation_dir, mask_dir, mask_key, output_dir)
+    do_surface(orientation_dir, center_line_dir, mask_dir, mask_key, output_dir)
+    do_coord(orientation_dir, surface_dir, output_dir)
+    do_thickness(coord_dir, mask_dir, mask_key, output_dir)
+
+    if check_surfaces:
+        plot_all_surfaces(surface_dir, state="thickness", skip_shown=True, mask_dir=None)
 

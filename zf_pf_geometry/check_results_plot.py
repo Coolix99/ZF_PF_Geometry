@@ -121,7 +121,7 @@ def plot_all_surfaces(surface_dir, state="surface", skip_shown=True, mask_dir=No
             continue
 
         # Load surface file
-        surface_file_key = f"{state.capitalize()} file name"
+        surface_file_key = f"Surface file name"
         if surface_file_key not in metadata[state]:
             logger.warning(f"Skipping {data_name}: Surface file key '{surface_file_key}' missing in metadata.")
             continue
