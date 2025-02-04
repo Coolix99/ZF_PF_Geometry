@@ -13,8 +13,8 @@ from zf_pf_geometry.center_line import center_line_session
 from zf_pf_geometry.surface import construct_Surface
 from zf_pf_geometry.coord import create_coord_system, calculateCurvatureTensor
 from zf_pf_geometry.thickness import calculate_Thickness
-from zf_pf_geometry.utils import make_path
-from zf_pf_geometry.image_operations import get_Image
+from zf_pf_geometry.utils import make_path, load_tif_image
+
 
 
 def setup_folders(base_dirs, data_name):
@@ -57,20 +57,7 @@ def update_metadata(metadata, file_paths, input_checksum=None):
             metadata[f"{key} checksum"] = get_checksum(path, algorithm="SHA1")
     return metadata
 
-def load_tif_image(folder):
-    """
-    Loads a single `.tif` image from the specified folder.
 
-    Args:
-        folder (str): Path to the folder containing `.tif` files.
-
-    Returns:
-        np.ndarray: Loaded image.
-    """
-    img_list = [item for item in os.listdir(folder) if item.endswith('.tif')]
-    if len(img_list) != 1:
-        raise ValueError(f"Expected 1 .tif file, found {len(img_list)} in {folder}")
-    return get_Image(os.path.join(folder, img_list[0]))
 
 def do_orientation(input_dirs, key_0, output_dir):
     """
@@ -173,12 +160,8 @@ def do_center_line(orientation_dir, mask_dir, mask_key, output_dir):
         orientation_df = pd.read_csv(orientation_file)
 
         # Load mask image
-        img_list = [item for item in os.listdir(mask_folder) if item.endswith('.tif')]
-        if len(img_list) == 1:
-            mask_image = get_Image(os.path.join(mask_folder, img_list[0]))
-        else:
-            logger.error(f"Expected one mask image in {mask_folder}, found {len(img_list)}. Skipping {data_name}.")
-            continue
+        mask_image=load_tif_image(mask_folder)
+        
 
         # Process center line
         logger.info(f"Computing center line for {data_name}.")

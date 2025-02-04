@@ -91,24 +91,18 @@ def vertical_center_line(prox_dist_pos,closed_image):
     res=np.array((all_centroid_y,all_centroid_x)).T
     return res
  
-def get_Plane(point1, point2, direction_dv,im_3d,centroid_3d):
+def get_Plane(point1, direction_pd, direction_dv,im_3d,centroid_3d):
 
-    plane_normal, plane_point = define_plane(point1, point2, direction_dv)
-    
+    plane_normal = np.cross(direction_pd, direction_dv)
+    plane_point=point1
     vector_to_point = centroid_3d - plane_point
     projection = vector_to_point - np.dot(vector_to_point, plane_normal) * plane_normal
     center_plane_point = plane_point + projection
 
     size_2d = (im_3d.shape[0]+20,np.max(im_3d.shape)+200)
 
-    direction_1 = np.array([0, point2[1]-point1[1], point2[2]-point1[2]])  # You can adjust the x and y components as needed
-    dot_product = np.dot(direction_1, plane_normal)
-    direction_1 -= dot_product / np.dot(plane_normal, plane_normal) * plane_normal
-    direction_1 = direction_1 / np.linalg.norm(direction_1)
 
-    direction_2=np.cross(plane_normal,direction_1)
-    direction_2 = direction_2 / np.linalg.norm(direction_2)
-    return center_plane_point, direction_2 ,direction_1 , size_2d,plane_normal
+    return center_plane_point, direction_dv,direction_pd , size_2d,plane_normal
 
 def calculate_relative_positions(x_positions, y_positions):
     x_diff = np.diff(x_positions)
@@ -125,17 +119,18 @@ def center_line_session(mask_3d,df,scale_3d):
     scale_3d = np.array(scale_3d)
 
     point1 = df.loc[df['name'] == 'Proximal_pt', ['z', 'y', 'x']].values[0]
-    point2 = df.loc[df['name'] == 'Distal_pt', ['z', 'y', 'x']].values[0]
+    direction_pd = df.loc[df['name'] == 'e_PD', ['z', 'y', 'x']].values[0]
     direction_dv = df.loc[df['name'] == 'e_n', ['z', 'y', 'x']].values[0]
    
     point1 = point1 / scale_3d
-    point2 = point2 / scale_3d
+    direction_pd = direction_pd / scale_3d
+    direction_pd = direction_pd / np.linalg.norm(direction_pd)
     direction_dv = direction_dv / scale_3d
     direction_dv = direction_dv / np.linalg.norm(direction_dv)
 
     centroid_3d=np.array(mask_3d.shape,dtype=float)/2
 
-    center_plane_point, direction_2 ,direction_1 , size_2d,plane_normal=get_Plane(point1, point2, direction_dv,mask_3d,centroid_3d)
+    center_plane_point, direction_2 ,direction_1 , size_2d,plane_normal=get_Plane(point1, direction_pd, direction_dv,mask_3d,centroid_3d)
 
     im = create_2d_image_from_3d(center_plane_point,direction_2 ,direction_1 , size_2d, mask_3d).astype(int)
     im_mask=im>0
@@ -204,17 +199,29 @@ def center_line_session(mask_3d,df,scale_3d):
 
     napari.run()
     try:
-        resulting_path = path_layer.data[0]/scale_3d[[0,1]]
+        resulting_path = path_layer.data[0]#/scale_3d[[0,1]]
     except:
         return None
- 
+    # print(size_2d)
+    # print(resulting_path)
     z_3d, y_3d, x_3d=map_2d_to_3d(center_plane_point, direction_1, direction_2, size_2d, resulting_path[:,0],resulting_path[:,1])
-    center_line_path_3d = np.column_stack((z_3d, y_3d, x_3d))#*scale_3d
+    center_line_path_3d = np.column_stack((z_3d, y_3d, x_3d))#scale_3d
+    # print(center_line_path_3d)
+    # viewer = napari.Viewer(ndisplay=3)
+    # viewer.add_labels(mask_3d)
+    # viewer.add_points(center_plane_point, size=5, edge_color='red')
+    # length = 200
 
-    viewer = napari.Viewer(ndisplay=3)
-    viewer.add_image(mask_3d)
-    viewer.add_shapes(data=center_line_path_3d, shape_type='path', edge_color='red', edge_width=2)
-    napari.run()
+    # # Create vector array in napari format (N, 2, D)
+    # vectors = np.array([
+    #     [center_plane_point, direction_1 * length],  # First vector
+    #     [center_plane_point, direction_2 * length]   # Second vector
+    # ])
+    # test_point = map_2d_to_3d(center_plane_point, direction_1, direction_2, size_2d, size_2d[0]/2, size_2d[1]/2)
+    # viewer.add_points(test_point, size=5, edge_color='green')
+    # viewer.add_vectors(vectors, edge_color='blue')
+    # viewer.add_shapes(data=center_line_path_3d, shape_type='path', edge_color='red', edge_width=2)
+    # napari.run()
 
 
     return center_line_path_3d
