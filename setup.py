@@ -15,7 +15,8 @@ setup(
         "trimesh",
         "opencv-python",
         "pymeshfix",
-        "pandas"
+        "pandas",
+        "napari[all]>=0.5"
     ],
     python_requires='>=3.9',
 )
