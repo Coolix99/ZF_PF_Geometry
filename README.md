@@ -51,3 +51,7 @@ There will be a napari viewer opened. It should show all specified images.
 <img src="assets/orient_III.svg" alt="orientation3" width="400">
 
 ### Centerline
+
+<img src="assets/center_line_I.svg" alt="center_line1" width="400">
+
+<img src="assets/center_line_II.png" alt="center_line2" width="400">
