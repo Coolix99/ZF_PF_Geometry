@@ -9,8 +9,13 @@ setup(
     license="MIT",
     packages=find_packages(),
     install_requires=[
-        # Add dependencies here
-        # e.g., 'numpy', 'scipy'
+        "GitPython",
+        "simple-file-checksum",
+        "pyvista",
+        "trimesh",
+        "opencv-python",
+        "pymeshfix",
+        "pandas"
     ],
     python_requires='>=3.9',
 )
