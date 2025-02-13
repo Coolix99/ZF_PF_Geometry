@@ -45,9 +45,12 @@ def update_metadata(metadata, file_paths, input_checksum=None):
     Returns:
         dict: Updated metadata.
     """
-    repo = git.Repo('.', search_parent_directories=True)
-    metadata["git hash"] = repo.head.object.hexsha
-    metadata["git origin url"] = repo.remotes.origin.url
+    try:
+        repo = git.Repo('.', search_parent_directories=True)
+        metadata["git hash"] = repo.head.object.hexsha
+        metadata["git origin url"] = repo.remotes.origin.url
+    except:
+        logger.debug(f"no git")
 
     if input_checksum:
         metadata["input_data_checksum"] = input_checksum
