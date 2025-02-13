@@ -50,7 +50,8 @@ def update_metadata(metadata, file_paths, input_checksum=None):
         metadata["git hash"] = repo.head.object.hexsha
         metadata["git origin url"] = repo.remotes.origin.url
     except:
-        logger.debug(f"no git")
+        #logger.debug(f"no git")
+        pass
 
     if input_checksum:
         metadata["input_data_checksum"] = input_checksum
