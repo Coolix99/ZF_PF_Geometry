@@ -3,6 +3,7 @@ import napari
 import pandas as pd
 from typing import List, Tuple
 import logging
+from napari.utils.key_bindings import KeymapHandler
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
         last_viewer_direction = event.view_direction
         logger.debug(f"Position: {event.position}, View Direction: {event.view_direction}, Dims Displayed: {event.dims_displayed}")
 
-    def add_point(viewer, color, points_data_key, n_previous=1):
+    def add_point(color, points_data_key, n_previous=1):
         nonlocal points, last_pos, points_data, line_layer
         points.append(last_pos)
         line = np.array([points])
@@ -60,33 +61,34 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
         points_data.append({'coordinate_mum': np.array(points[1]), 'name': points_data_key[1]})
         points_data.append({'coordinate_mum': last_viewer_direction, 'name': points_data_key[2]})
 
-    def set_first_point(viewer):
+    def set_first_point():
         nonlocal points, last_pos
         points = [last_pos]
 
-    @viewer.bind_key('a')
+
+    @im_layer.bind_key('a')
     def first(viewer):
-        set_first_point(viewer)
+        set_first_point()
 
-    @viewer.bind_key('b')
+    @im_layer.bind_key('b')
     def second(viewer):
-        add_point(viewer, 'red', ['Proximal_pt', 'Distal_pt', 'viewer_direction_DV'])
+        add_point('red', ['Proximal_pt', 'Distal_pt', 'viewer_direction_DV'])
 
-    @viewer.bind_key('c')
+    @im_layer.bind_key('c')
     def first2(viewer):
-        set_first_point(viewer)
+        set_first_point()
 
-    @viewer.bind_key('d')
+    @im_layer.bind_key('d')
     def second2(viewer):
-        add_point(viewer, 'green', ['Anterior_pt', 'Posterior_pt', 'viewer_direction_DP'], 2)
+        add_point('green', ['Anterior_pt', 'Posterior_pt', 'viewer_direction_DP'], 2)
 
-    @viewer.bind_key('e')
+    @im_layer.bind_key('e')
     def first3(viewer):
-        set_first_point(viewer)
+        set_first_point()
 
-    @viewer.bind_key('f')
+    @im_layer.bind_key('f')
     def second3(viewer):
-        add_point(viewer, 'blue', ['Proximal2_pt', 'Distal2_pt', 'viewer_direction_AP'])
+        add_point('blue', ['Proximal2_pt', 'Distal2_pt', 'viewer_direction_AP'])
 
     fin_side = None
     @viewer.bind_key('r')
@@ -104,6 +106,7 @@ def orientation_session(images: List[np.ndarray], scale: List[float]) -> Tuple[p
     @viewer.bind_key('q')
     def end_left_fin(viewer):
         viewer.close()
+
 
     napari.run()
 

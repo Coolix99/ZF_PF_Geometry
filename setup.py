@@ -13,10 +13,10 @@ setup(
         "simple-file-checksum",
         "pyvista",
         "trimesh",
-        "opencv-python",
+        "napari[all]>=0.5",
+        "opencv-python-headless",
         "pymeshfix",
         "pandas",
-        "napari[all]>=0.5"
     ],
     python_requires='>=3.9',
 )
