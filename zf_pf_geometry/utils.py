@@ -12,7 +12,7 @@ def load_tif_image(folder):
     Returns:
         np.ndarray: Loaded image.
     """
-    img_list = [item for item in os.listdir(folder) if item.endswith('.tif')]
+    img_list = [item for item in os.listdir(folder) if item.lower().endswith(('.tif', '.tiff'))]
     if len(img_list) != 1:
         raise ValueError(f"Expected 1 .tif file, found {len(img_list)} in {folder}")
     return get_Image(os.path.join(folder, img_list[0]))
