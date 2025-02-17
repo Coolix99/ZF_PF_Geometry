@@ -173,7 +173,9 @@ def do_center_line(orientation_dir, mask_dir, mask_key, output_dir):
         center_line_path_3d = center_line_session(
             mask_image, orientation_df, input_data['orientation']['scale']
         )
-
+        if not isinstance(center_line_path_3d, np.ndarray):
+            logging.warning("center_line_path_3d is not a NumPy array. Skip")
+            continue
         # Save center line data
         CenterLine_file_name = f"{data_name}_CenterLine.npy"
         CenterLine_file = os.path.join(output_folder, CenterLine_file_name)
